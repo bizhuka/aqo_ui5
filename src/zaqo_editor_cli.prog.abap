@@ -899,7 +899,7 @@ CLASS lcl_opt IMPLEMENTATION.
 
     " Ok
     ls_back_info-kind      = 'I'.
-    ls_back_info-info_text = lo_option->save( iv_mandt = iv_mandt ).
+    ls_back_info-info_text = lo_option->save( ). " iv_mandt = iv_mandt
 
     rv_out = zcl_aqo_helper=>to_json( ls_back_info ).    "#EC CI_VALPAR
   ENDMETHOD.
