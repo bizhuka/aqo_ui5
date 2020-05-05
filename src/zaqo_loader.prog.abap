@@ -108,7 +108,7 @@ CLASS lcl_main IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      lv_xstr = zcl_aqo_helper=>binary_to_xstring(
+      lv_xstr = zcl_eui_conv=>binary_to_xstring(
        it_table  = lt_w3mime
        iv_length = lv_len ).
 

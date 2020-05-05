@@ -23,7 +23,7 @@ FORM post_action
   DATA:
     lt_param      TYPE tihttpnvp.
 
-  zcl_aqo_helper=>from_json(
+  zcl_eui_conv=>from_json(
    EXPORTING
     iv_json = iv_in
    IMPORTING

@@ -10,7 +10,7 @@ CLASS zcl_aqo_helper DEFINITION LOAD.
 TYPES:
   " Description of search help field
   BEGIN OF ts_sh_field.
-    INCLUDE TYPE zcl_aqo_helper=>ts_field_desc AS field_desc.
+    INCLUDE TYPE zcl_eui_type=>ts_field_desc AS field_desc.
 TYPES:
   " Runtime fields
   is_key        TYPE xsdboolean,
@@ -125,7 +125,7 @@ CLASS lcl_opt DEFINITION INHERITING FROM zcl_aqo_option ABSTRACT FINAL.
         EXPORTING
                   ev_db       TYPE string
                   ev_shlp     TYPE shlpname
-                  ev_db_fld   TYPE zdaqo_db_field
+                  ev_db_fld   TYPE zdeui_db_field
                   ev_dom      TYPE string
 
                   es_sh_desc  TYPE shlp_descr

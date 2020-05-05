@@ -55,7 +55,7 @@ CLASS lcl_gui_html_viewer IMPLEMENTATION.
       CHECK lv_is_folder <> abap_true.
 
       CLEAR lt_w3mime.
-      zcl_aqo_helper=>xstring_to_binary(
+      zcl_eui_conv=>xstring_to_binary(
        EXPORTING
          iv_xstring = lv_xstr
        IMPORTING
@@ -115,13 +115,13 @@ CLASS lcl_gui_html_viewer IMPLEMENTATION.
       OTHERS    = 5 ).
 
     " Do not use internal folder
-    lv_str = zcl_aqo_helper=>xstring_to_string( lv_xstr ).
+    lv_str = zcl_eui_conv=>xstring_to_string( lv_xstr ).
     REPLACE FIRST OCCURRENCE OF `src="webapp/sapui5res/sap-ui-core.js"` IN lv_str
      WITH `src="https://sapui5.hana.ondemand.com/1.62.0/resources/sap-ui-core.js"`.
-    lv_xstr = zcl_aqo_helper=>string_to_xstring( lv_str ).
+    lv_xstr = zcl_eui_conv=>string_to_xstring( lv_str ).
 
     CLEAR lt_w3mime.
-    zcl_aqo_helper=>xstring_to_binary(
+    zcl_eui_conv=>xstring_to_binary(
      EXPORTING
       iv_xstring = lv_xstr
      IMPORTING
@@ -213,7 +213,7 @@ CLASS lcl_gui_html_viewer IMPLEMENTATION.
       CATCH zcx_aqo_exception INTO lo_error.
         ls_back_info-info_text = lo_error->get_text( ).
         ls_back_info-kind         = 'E'.
-        rv_out = zcl_aqo_helper=>to_json( ls_back_info ).
+        rv_out = zcl_eui_conv=>to_json( ls_back_info ).
     ENDTRY.
 
     " Callback   lv_guid IS NOT INITIAL AND

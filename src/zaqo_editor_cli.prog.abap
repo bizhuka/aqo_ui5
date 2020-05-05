@@ -45,7 +45,7 @@ CLASS lcl_opt IMPLEMENTATION.
   METHOD pai.
     CASE cv_cmd.
       WHEN 'ESCAPE' OR 'CANCEL'.
-        IF zcl_aqo_helper=>confirm(
+        IF zcl_eui_screen=>confirm(
            iv_title    = 'Confirmation'(ext)
            iv_question = 'Close without saving?'(cnf) ) = abap_true.
           LEAVE TO SCREEN 0.
@@ -113,11 +113,11 @@ CLASS lcl_opt IMPLEMENTATION.
 
       " Relative path and file content
       REPLACE FIRST OCCURRENCE OF lcl_opt=>mc_base_repo IN ls_pair->name WITH ''.
-      ls_pair->file = zcl_aqo_helper=>xstring_to_string( lv_xstr ).
+      ls_pair->file = zcl_eui_conv=>xstring_to_string( lv_xstr ).
     ENDLOOP.
 
     " Send back all files
-    rv_out = zcl_aqo_helper=>to_json( ls_response ).
+    rv_out = zcl_eui_conv=>to_json( ls_response ).
   ENDMETHOD.
 
   METHOD get_entity_desc.
@@ -128,12 +128,13 @@ CLASS lcl_opt IMPLEMENTATION.
       lt_shlp_descr_tab TYPE shlp_desct,
       lo_struc          TYPE REF TO cl_abap_structdescr,
       lo_table          TYPE REF TO cl_abap_tabledescr,
-      lt_field_desc     TYPE zcl_aqo_helper=>tt_field_desc,
-      ls_field_desc     TYPE zcl_aqo_helper=>ts_field_desc,
+      lt_field_desc     TYPE zcl_eui_type=>tt_field_desc,
+      ls_field_desc     TYPE zcl_eui_type=>ts_field_desc,
       ls_sh_field       TYPE REF TO ts_sh_field,
       lt_fielddescr     TYPE ddfields,
       ls_fld_prop       TYPE REF TO ddshfprop,
-      lt_keys           TYPE SORTED TABLE OF fieldname WITH UNIQUE KEY table_line.
+      lt_keys           TYPE SORTED TABLE OF fieldname WITH UNIQUE KEY table_line,
+      lo_error          TYPE REF TO zcx_eui_exception.
 
     " Based on entity name
     IF iv_entity CP 'DB_*'.
@@ -217,19 +218,25 @@ CLASS lcl_opt IMPLEMENTATION.
     ENDIF.
 
     IF er_table IS REQUESTED.
-      IF lo_struc IS INITIAL.
-        " Strucure fields
-        LOOP AT lt_fielddescr REFERENCE INTO ls_field.
-          ls_field_desc = zcl_aqo_helper=>get_field_desc( is_sh_field = ls_field->* ).
-          INSERT ls_field_desc INTO TABLE lt_field_desc.
-        ENDLOOP.
+      TRY.
+          IF lo_struc IS INITIAL.
+            " Strucure fields
+            LOOP AT lt_fielddescr REFERENCE INTO ls_field.
+              ls_field_desc = zcl_eui_type=>get_field_desc( is_sh_field = ls_field->* ).
+              INSERT ls_field_desc INTO TABLE lt_field_desc.
+            ENDLOOP.
 
-        " Output table
-        lo_struc = zcl_aqo_helper=>create_structure( it_field_desc = lt_field_desc ).
-      ENDIF.
+            " Output table
+            lo_struc = zcl_eui_type=>create_structure( it_field_desc = lt_field_desc ).
+          ENDIF.
 
-      lo_table = cl_abap_tabledescr=>create( p_line_type = lo_struc ).
-      CREATE DATA er_table TYPE HANDLE lo_table.
+          lo_table = cl_abap_tabledescr=>create( p_line_type = lo_struc ).
+          CREATE DATA er_table TYPE HANDLE lo_table.
+        CATCH zcx_eui_exception INTO lo_error.
+          RAISE EXCEPTION TYPE zcx_aqo_exception
+            EXPORTING
+              previous = lo_error.
+      ENDTRY.
     ENDIF.
 
     IF et_sh_field IS REQUESTED.
@@ -243,7 +250,14 @@ CLASS lcl_opt IMPLEMENTATION.
 
       LOOP AT lt_fielddescr REFERENCE INTO ls_field.
         APPEND INITIAL LINE TO et_sh_field REFERENCE INTO ls_sh_field.
-        ls_sh_field->field_desc  = zcl_aqo_helper=>get_field_desc( is_sh_field = ls_field->* ).
+        TRY.
+            ls_sh_field->field_desc  = zcl_eui_type=>get_field_desc( is_sh_field = ls_field->* ).
+          CATCH zcx_eui_exception INTO lo_error.
+            RAISE EXCEPTION TYPE zcx_aqo_exception
+              EXPORTING
+                previous = lo_error.
+        ENDTRY.
+
         " ls_sh_field->short_label = ls_field->scrtext_s.
 
         READ TABLE lt_keys TRANSPORTING NO FIELDS
@@ -289,7 +303,7 @@ CLASS lcl_opt IMPLEMENTATION.
     FIELD-SYMBOLS:
       <lt_table> TYPE STANDARD TABLE.
 
-    zcl_aqo_helper=>from_json(
+    zcl_eui_conv=>from_json(
      EXPORTING
        iv_json = iv_entities
      IMPORTING
@@ -332,7 +346,7 @@ CLASS lcl_opt IMPLEMENTATION.
     ENDLOOP.
 
     " As one string
-    rv_out = zcl_aqo_helper=>to_json( lt_out ).
+    rv_out = zcl_eui_conv=>to_json( lt_out ).
   ENDMETHOD.
 
   METHOD get_sh_table.
@@ -448,7 +462,7 @@ CLASS lcl_opt IMPLEMENTATION.
       lt_response TYPE STANDARD TABLE OF ts_response,
       ls_response TYPE REF TO ts_response.
 
-    zcl_aqo_helper=>from_json(
+    zcl_eui_conv=>from_json(
      EXPORTING
        iv_json = iv_requests
      IMPORTING
@@ -484,7 +498,7 @@ CLASS lcl_opt IMPLEMENTATION.
     ENDLOOP.
 
     " Send back all files
-    rv_out = zcl_aqo_helper=>to_json( lt_response ).
+    rv_out = zcl_eui_conv=>to_json( lt_response ).
   ENDMETHOD.
 
   METHOD get_odata.
@@ -538,14 +552,14 @@ CLASS lcl_opt IMPLEMENTATION.
           lv_top = ls_param->value.
 
         WHEN '$orderby'.
-          zcl_aqo_helper=>from_json(
+          zcl_eui_conv=>from_json(
            EXPORTING
              iv_json = ls_param->value
            IMPORTING
              ex_data = ls_sort_param ).
 
         WHEN '$filter'.
-          zcl_aqo_helper=>from_json(
+          zcl_eui_conv=>from_json(
            EXPORTING
              iv_json = ls_param->value
            IMPORTING
@@ -673,42 +687,29 @@ CLASS lcl_opt IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD sap_download_file.
-    DATA:
-      lv_encoding TYPE abap_encoding,
-      lv_content  TYPE string,
-      lv_title    TYPE string,
-      lv_path     TYPE string,
-      lv_filename TYPE string,
-      lv_fullpath TYPE string.
+    DATA lv_encoding TYPE abap_encoding.
 
     IF iv_again IS INITIAL.
       rv_out = mc_again.
       RETURN.
     ENDIF.
 
-    lv_title = 'Save option values'(sov).
-    cl_gui_frontend_services=>file_save_dialog(
-     EXPORTING
-       window_title      = lv_title
-       default_file_name = iv_file_name
-     CHANGING
-       path         = lv_path
-       filename     = lv_filename
-       fullpath     = lv_fullpath
-     EXCEPTIONS
-       OTHERS       = 1 ).
-    CHECK sy-subrc = 0 AND lv_fullpath IS NOT INITIAL.
-
     " What code page
     lv_encoding = iv_charset.
     IF lv_encoding IS INITIAL.
-      lv_encoding = zcl_aqo_helper=>mc_utf8.
+      lv_encoding = zcl_eui_conv=>mc_encoding-utf_8.
     ENDIF.
 
-    zcl_aqo_helper=>download(
-     iv_filename = lv_fullpath
-     iv_content  = iv_content
-     iv_encoding = lv_encoding ).
+    " For debug
+    DATA lo_file TYPE REF TO zcl_eui_file.
+    lo_file->import_from_string( iv_string = iv_content iv_encoding = lv_encoding ).
+    TRY.
+        lo_file->download(
+         iv_full_path    = iv_file_name
+         iv_save_dialog  = abap_true
+         iv_window_title = 'Save option values'(sov) ).
+      CATCH zcx_eui_exception.
+    ENDTRY.
   ENDMETHOD.
 
   METHOD get_send_fields.
@@ -742,7 +743,7 @@ CLASS lcl_opt IMPLEMENTATION.
       ASSIGN ls_field_value_send->sub_columns->* TO <lt_sub_columns>.
 
       CLEAR lt_sub_columns.
-      zcl_aqo_helper=>from_json(
+      zcl_eui_conv=>from_json(
        EXPORTING
         iv_json = ls_field_value->sub_fdesc
        IMPORTING
@@ -831,7 +832,7 @@ CLASS lcl_opt IMPLEMENTATION.
      io_option = lo_option ).
 
     " As one string
-    rv_out = zcl_aqo_helper=>to_json( ls_response ).
+    rv_out = zcl_eui_conv=>to_json( ls_response ).
   ENDMETHOD.
 
   METHOD sap_save_option.
@@ -859,7 +860,7 @@ CLASS lcl_opt IMPLEMENTATION.
         iv_option_id  = iv_option_id ).
 
     " DB option
-    zcl_aqo_helper=>from_json(
+    zcl_eui_conv=>from_json(
      EXPORTING
        iv_json = iv_cur_option
      IMPORTING
@@ -869,7 +870,7 @@ CLASS lcl_opt IMPLEMENTATION.
     lo_option->ms_db_item-prev_value_cnt = ls_db_item-prev_value_cnt.
 
     " Fields
-    zcl_aqo_helper=>from_json(
+    zcl_eui_conv=>from_json(
      EXPORTING
        iv_json = iv_cur_fields
      IMPORTING
@@ -901,29 +902,36 @@ CLASS lcl_opt IMPLEMENTATION.
     ls_back_info-kind      = 'I'.
     ls_back_info-info_text = lo_option->save( ). " iv_mandt = iv_mandt
 
-    rv_out = zcl_aqo_helper=>to_json( ls_back_info ).    "#EC CI_VALPAR
+    rv_out = zcl_eui_conv=>to_json( ls_back_info ).      "#EC CI_VALPAR
   ENDMETHOD.
 
   METHOD sap_get_field_desc.
     DATA:
       ls_field_value TYPE zcl_aqo_helper=>ts_field_value,
       lo_type        TYPE REF TO cl_abap_datadescr,
-      lr_data        TYPE REF TO data.
+      lr_data        TYPE REF TO data,
+      lo_error       TYPE REF TO zcx_eui_exception.
     FIELD-SYMBOLS:
       <lv_data> TYPE any.
 
-    " Create by text description
-    lo_type = zcl_aqo_helper=>create_type_descr( iv_rollname = iv_rollname ).
-    CREATE DATA lr_data TYPE HANDLE lo_type.
+    TRY.
+        " Create by text description
+        lo_type = zcl_eui_type=>create_type_descr( iv_rollname = iv_rollname ).
+        CREATE DATA lr_data TYPE HANDLE lo_type.
 
-    " Get full description
-    ASSIGN lr_data->* TO <lv_data>.
-    ls_field_value-field_desc = zcl_aqo_helper=>get_field_desc(
-     iv_field_name = iv_name
-     iv_data       = <lv_data> ).
+        " Get full description
+        ASSIGN lr_data->* TO <lv_data>.
+        ls_field_value-field_desc = zcl_eui_type=>get_field_desc(
+         iv_field_name = iv_name
+         iv_data       = <lv_data> ).
 
-    " As one string
-    rv_out = zcl_aqo_helper=>to_json( ls_field_value ).
+        " As one string
+        rv_out = zcl_eui_conv=>to_json( ls_field_value ).
+      CATCH zcx_eui_exception INTO lo_error.
+        RAISE EXCEPTION TYPE zcx_aqo_exception
+          EXPORTING
+            previous = lo_error.
+    ENDTRY.
   ENDMETHOD.
 
   METHOD sap_delete_or_transport.
@@ -944,7 +952,7 @@ CLASS lcl_opt IMPLEMENTATION.
     ENDIF.
 
     " Result
-    rv_out = zcl_aqo_helper=>to_json( ls_back_info ).
+    rv_out = zcl_eui_conv=>to_json( ls_back_info ).
   ENDMETHOD.
 
 ENDCLASS.
