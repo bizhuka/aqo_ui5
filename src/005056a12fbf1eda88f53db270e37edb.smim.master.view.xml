@@ -103,7 +103,7 @@
                             intro="">
                         <attributes>
                             <ObjectAttribute
-                                    text="{CREATED_NAME_TEXT} ({CREATED_UNAME})"/>
+                                    text="{CREATED_NAME_TXT} ({CREATED_UNAME})"/>
                             <ObjectAttribute
                                     text="{MAINPROGRAM} - {
                                         path: 'CREATED_DATE',

@@ -115,7 +115,7 @@ sap.ui.define([
                             new Filter("OPTION_ID", FilterOperator.Contains, sQuery),
                             new Filter("DESCRIPTION", FilterOperator.Contains, sQuery),
                             new Filter("CREATED_UNAME", FilterOperator.Contains, sQuery),
-                            new Filter("CREATED_NAME_TEXT", FilterOperator.Contains, sQuery),
+                            new Filter("CREATED_NAME_TXT", FilterOperator.Contains, sQuery),
                             new Filter("MAINPROGRAM", FilterOperator.Contains, sQuery)
                         ],
                         and: false
