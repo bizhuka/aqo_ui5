@@ -1,4 +1,9 @@
-### ABAP quick options (ui5 version)
+### ABAP quick options (ui5 version) 
+
+Last compatible version of main package is
+https://github.com/bizhuka/aqo/tree/last-version-2.0
+
+obsolete from 27.10.2021
 
 ### Add-in for [aqo](https://github.com/bizhuka/aqo)
 
